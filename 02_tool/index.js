@@ -4,29 +4,26 @@ import { OpenAI } from "openai";
 import dotenv from "dotenv";
 dotenv.config();
 
-(async () => {
-  // 1. Composio ToolSet と OpenAI クライアントの初期化
+async function main() {
   const toolset = new OpenAIToolSet({
-    apiKey: process.env.COMPOSIO_API_KEY, // .env に設定した COMPOSIO_API_KEY を利用
+    apiKey: process.env.COMPOSIO_API_KEY,
   });
   const openai_client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY, // .env に設定した OPENAI_API_KEY を利用
+    apiKey: process.env.OPENAI_API_KEY,
   });
 
-  // 2. Gmail アカウントとの接続を開始
-  // この接続リクエストで返される URL にアクセスして OAuth 認証を完了させてください。
+  // 2. Initiate connection with your Gmail account using OAuth2.
+  // Please visit the URL returned by this connection request to complete the OAuth authentication.
   const connectionRequest = await toolset.client.connectedAccounts.initiate({
     appName: "gmail",
-    entityId: "default", // エンティティIDは "default" として利用
+    entityId: "default",
     authMode: "OAUTH2",
     authConfig: {},
   });
-  console.log(
-    "Gmail アカウントを接続するため、以下の URL にアクセスしてください:"
-  );
+  console.log("Please visit the following URL to connect your Gmail account:");
   console.log(connectionRequest.redirectUrl);
 
-  // 3. Gmail の新着メールを監視するトリガーを設定
+  // 3. Set up a trigger to monitor new Gmail messages.
   const entity = toolset.client.getEntity("default");
   const triggerResponse = await entity.setupTrigger({
     appName: "gmail",
@@ -37,15 +34,15 @@ dotenv.config();
       labelIds: "INBOX",
     },
   });
-  console.log("トリガー設定完了:", triggerResponse);
+  console.log("Trigger setup completed:", triggerResponse);
 
-  // 4. 新着メールイベントを処理するエージェント関数を定義
+  // 4. Define the agent function to process new email events.
   const agentFunction = async (threadId, subject, senderMail) => {
     try {
-      // Gmail 用のツールを取得（例：メールにラベルを追加するアクション等）
+      // Get the tools for Gmail (e.g., actions such as adding labels to emails).
       const tools = await toolset.getTools({ apps: ["gmail"] });
 
-      // OpenAI のチャット補完リクエストを作成
+      // Create an OpenAI chat completion request.
       const response = await openai_client.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
@@ -60,26 +57,26 @@ dotenv.config();
           },
         ],
         tools: tools,
-        tool_choice: "auto", // ツール選択は自動に任せる
+        tool_choice: "auto", // Automatically select tools.
       });
 
-      // GPT-4 の応答に基づいて必要なツールコール（例えば、Gmail にラベルを追加する処理）を実行
+      // Execute the necessary tool calls based on GPT-4's response (for example, adding a label to the Gmail email).
       const result = await toolset.handleToolCall(response);
-      console.log("エージェント関数実行結果:", result);
+      console.log("Agent function execution result:", result);
     } catch (error) {
-      console.error("エージェント関数内でエラーが発生:", error);
+      console.error("An error occurred in the agent function:", error);
     }
   };
 
-  // 5. Gmail の新着メールトリガーのリスナーを作成
+  // 5. Create a listener for the new Gmail message trigger.
   toolset.triggers.subscribe(
     (data) => {
-      console.log("受信したトリガーデータ:", data);
-      // トリガーから必要な情報（スレッドID、件名、送信者）を抽出
+      console.log("Received trigger data:", data);
+      // Extract necessary information from the trigger (thread ID, subject, sender).
       const {
         payload: { threadId, subject, sender },
       } = data;
-      // エージェント関数を呼び出して処理を実行
+      // Call the agent function to process the event.
       agentFunction(threadId, subject, sender);
     },
     {
@@ -87,5 +84,7 @@ dotenv.config();
     }
   );
 
-  console.log("新着 Gmail メッセージのトリガーを監視中...");
-})();
+  console.log("Monitoring trigger for new Gmail messages...");
+}
+
+main();

@@ -11,6 +11,6 @@
   "description": "",
   "dependencies": {
     "composio-core": "^0.5.7",
-    "openai": "^4.82.0"
+    "openai": "^4.83.0"
   }
 }
