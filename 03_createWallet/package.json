@@ -11,6 +11,7 @@
   "description": "",
   "dependencies": {
     "@langchain/openai": "^0.2.11",
-    "composio-core": "^0.5.7"
+    "composio-core": "^0.5.7",
+    "openai": "^4.83.0"
   }
 }
